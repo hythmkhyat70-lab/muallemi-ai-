@@ -1,0 +1,164 @@
+name: Build Muallemi APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create Flutter project
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Generate app
+        shell: bash
+        run: |
+          flutter create --platforms=android muallemi_ai
+          cd muallemi_ai
+          cat > lib/main.dart <<'DART'
+import 'package:flutter/material.dart';
+
+void main() => runApp(const MuallemiApp());
+
+class MuallemiApp extends StatelessWidget {
+  const MuallemiApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'معلّمي AI',
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
+        useMaterial3: true,
+      ),
+      home: const HomePage(),
+    );
+  }
+}
+
+class HomePage extends StatelessWidget {
+  const HomePage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(title: const Text('معلّمي AI')),
+        body: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: 30),
+              const Text(
+                'مرحبًا بك في معلّمي AI 👋',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 15),
+              const Text(
+                'مدرسك الشخصي لتعلّم العربية والتركية والإنجليزية',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 17),
+              ),
+              const SizedBox(height: 40),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    children: [
+                      const Text('الصف الأول', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 10),
+                      const Text('الدرس الأول: الألوان باللغة التركية'),
+                      const SizedBox(height: 18),
+                      FilledButton(
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const LessonPage()),
+                        ),
+                        child: const Text('ابدأ الدرس'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class LessonPage extends StatefulWidget {
+  const LessonPage({super.key});
+
+  @override
+  State<LessonPage> createState() => _LessonPageState();
+}
+
+class _LessonPageState extends State<LessonPage> {
+  int index = 0;
+  final words = const ['Kırmızı', 'Mavi', 'Sarı'];
+  final meanings = const ['أحمر', 'أزرق', 'أصفر'];
+
+  @override
+  Widget build(BuildContext context) {
+    final word = words[index];
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(title: const Text('درس الألوان')),
+        body: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text('ما معنى هذه الكلمة؟', style: TextStyle(fontSize: 20)),
+              const SizedBox(height: 25),
+              Text(word, style: const TextStyle(fontSize: 42, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 10),
+              Text('(${meanings[index]})', style: const TextStyle(fontSize: 20)),
+              const SizedBox(height: 35),
+              FilledButton(
+                onPressed: () {
+                  if (index < words.length - 1) {
+                    setState(() => index++);
+                  } else {
+                    showDialog(
+                      context: context,
+                      builder: (_) => AlertDialog(
+                        title: const Text('أحسنت! 🎉'),
+                        content: const Text('أنهيت الدرس الأول.'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('موافق'),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                },
+                child: Text(index < words.length - 1 ? 'التالي' : 'إنهاء الدرس'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+DART
+          flutter build apk --release
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: muallemi-ai-apk
+          path: muallemi_ai/build/app/outputs/flutter-apk/app-release.apk
